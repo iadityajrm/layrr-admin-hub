@@ -120,7 +120,7 @@ export default function Users() {
                       {user.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>${user.earnings_total.toFixed(2)}</TableCell>
+                  <TableCell>${(user.earnings_total || 0).toFixed(2)}</TableCell>
                   <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <Button
