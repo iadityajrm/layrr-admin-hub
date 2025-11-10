@@ -36,10 +36,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               _role: 'admin'
             });
             
-            if (!error && data) {
+            if (error) {
+              console.error('Error checking admin role:', error);
+              setIsAdmin(false);
+            } else if (data) {
               setIsAdmin(true);
             } else {
               setIsAdmin(false);
+              if (event === 'SIGNED_IN') {
+                toast({
+                  title: "Access Denied",
+                  description: "You don't have admin privileges to access this dashboard.",
+                  variant: "destructive",
+                });
+              }
             }
           }, 0);
         } else {
@@ -60,7 +70,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             _role: 'admin'
           });
           
-          if (!error && data) {
+          if (error) {
+            console.error('Error checking admin role:', error);
+          } else if (data) {
             setIsAdmin(true);
           }
           setLoading(false);
