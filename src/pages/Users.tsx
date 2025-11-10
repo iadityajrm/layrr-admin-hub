@@ -9,11 +9,11 @@ import { UserCheck, UserX } from 'lucide-react';
 
 interface User {
   id: string;
-  name: string;
+  full_name: string;
   email: string;
   role: string;
   status: string;
-  joined_at: string;
+  created_at: string;
   earnings_total: number;
 }
 
@@ -31,7 +31,7 @@ export default function Users() {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .order('joined_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setUsers(data || []);
@@ -110,7 +110,7 @@ export default function Users() {
             <TableBody>
               {users.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
+                  <TableCell className="font-medium">{user.full_name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{user.role}</Badge>
@@ -121,7 +121,7 @@ export default function Users() {
                     </Badge>
                   </TableCell>
                   <TableCell>${user.earnings_total.toFixed(2)}</TableCell>
-                  <TableCell>{new Date(user.joined_at).toLocaleDateString()}</TableCell>
+                  <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <Button
                       size="sm"

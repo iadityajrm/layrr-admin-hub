@@ -24,11 +24,11 @@ export type Database = {
       users: {
         Row: {
           id: string;
-          name: string;
+          full_name: string;
           email: string;
           role: string;
           status: string;
-          joined_at: string;
+          created_at: string;
           earnings_total: number;
         };
       };

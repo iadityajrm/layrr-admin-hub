@@ -13,7 +13,7 @@ interface Earning {
   amount: number;
   status: string;
   created_at: string;
-  users?: { name: string; email: string };
+  users?: { full_name: string; email: string };
 }
 
 export default function Earnings() {
@@ -32,7 +32,7 @@ export default function Earnings() {
         .from('earnings')
         .select(`
           *,
-          users:user_id (name, email)
+          users:user_id (full_name, email)
         `)
         .order('created_at', { ascending: false });
 
@@ -158,7 +158,7 @@ export default function Earnings() {
             <TableBody>
               {earnings.map((earning) => (
                 <TableRow key={earning.id}>
-                  <TableCell className="font-medium">{earning.users?.name || 'Unknown'}</TableCell>
+                  <TableCell className="font-medium">{earning.users?.full_name || 'Unknown'}</TableCell>
                   <TableCell>{earning.users?.email || 'N/A'}</TableCell>
                   <TableCell>${earning.amount.toFixed(2)}</TableCell>
                   <TableCell>
