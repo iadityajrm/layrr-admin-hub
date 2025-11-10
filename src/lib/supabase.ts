@@ -21,7 +21,7 @@ export type Database = {
           role: 'admin' | 'moderator' | 'user';
         };
       };
-      profiles: {
+      users: {
         Row: {
           id: string;
           name: string;

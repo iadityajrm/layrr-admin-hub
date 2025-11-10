@@ -14,7 +14,7 @@ interface Submission {
   project_name: string;
   status: string;
   submitted_at: string;
-  profiles?: { name: string };
+  users?: { name: string };
   templates?: { title: string };
 }
 
@@ -33,7 +33,7 @@ export default function Submissions() {
         .from('submissions')
         .select(`
           *,
-          profiles:user_id (name),
+          users:user_id (name),
           templates:template_id (title)
         `)
         .order('submitted_at', { ascending: false });
@@ -112,7 +112,7 @@ export default function Submissions() {
               {submissions.map((submission) => (
                 <TableRow key={submission.id}>
                   <TableCell className="font-medium">{submission.project_name}</TableCell>
-                  <TableCell>{submission.profiles?.name || 'Unknown'}</TableCell>
+                  <TableCell>{submission.users?.name || 'Unknown'}</TableCell>
                   <TableCell>{submission.templates?.title || 'Unknown'}</TableCell>
                   <TableCell>
                     <Badge

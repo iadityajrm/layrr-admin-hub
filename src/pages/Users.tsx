@@ -29,7 +29,7 @@ export default function Users() {
   const fetchUsers = async () => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('users')
         .select('*')
         .order('joined_at', { ascending: false });
 
@@ -52,7 +52,7 @@ export default function Users() {
 
     try {
       const { error } = await supabase
-        .from('profiles')
+        .from('users')
         .update({ status: newStatus })
         .eq('id', userId);
 
