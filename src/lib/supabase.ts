@@ -77,14 +77,6 @@ export type Database = {
           created_at: string;
         };
       };
-      payouts: {
-        Row: {
-          id: string;
-          user_id: string;
-          amount: number;
-          processed_at: string;
-        };
-      };
     };
   };
 };

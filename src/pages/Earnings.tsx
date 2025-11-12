@@ -64,24 +64,13 @@ export default function Earnings() {
 
   const markAsPaid = async (id: string, userId: string, amount: number) => {
     try {
-      // Update earnings status
-      const { error: earningsError } = await supabase
+      // Update earnings status to paid
+      const { error } = await supabase
         .from('earnings')
         .update({ status: 'paid' })
         .eq('id', id);
 
-      if (earningsError) throw earningsError;
-
-      // Create payout record
-      const { error: payoutError } = await supabase
-        .from('payouts')
-        .insert([{
-          user_id: userId,
-          amount: amount,
-          processed_at: new Date().toISOString(),
-        }]);
-
-      if (payoutError) throw payoutError;
+      if (error) throw error;
 
       toast({
         title: "Success",

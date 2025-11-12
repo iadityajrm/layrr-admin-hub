@@ -32,17 +32,16 @@ export default function Dashboard() {
 
   const fetchDashboardStats = async () => {
     try {
-      const [usersRes, templatesRes, submissionsRes, pendingRes, payoutsRes, earningsRes] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+      const [usersRes, templatesRes, submissionsRes, pendingRes, earningsRes] = await Promise.all([
+        supabase.from('users').select('*', { count: 'exact', head: true }),
         supabase.from('templates').select('*', { count: 'exact', head: true }),
         supabase.from('submissions').select('*', { count: 'exact', head: true }),
         supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('payouts').select('amount'),
-        supabase.from('earnings').select('amount, created_at'),
+        supabase.from('earnings').select('amount, status, created_at'),
       ]);
 
-      const totalPayouts = payoutsRes.data?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
       const totalEarnings = earningsRes.data?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+      const totalPayouts = earningsRes.data?.filter(e => e.status === 'paid').reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
 
       setStats({
         totalUsers: usersRes.count || 0,
