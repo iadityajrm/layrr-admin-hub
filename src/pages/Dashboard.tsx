@@ -22,6 +22,8 @@ export default function Dashboard() {
     totalPayouts: 0,
     totalEarnings: 0,
   });
+  const [weeklyData, setWeeklyData] = useState<{ name: string; earnings: number }[]>([]);
+  const [monthlyData, setMonthlyData] = useState<{ name: string; submissions: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,7 +38,7 @@ export default function Dashboard() {
         supabase.from('submissions').select('*', { count: 'exact', head: true }),
         supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('payouts').select('amount'),
-        supabase.from('earnings').select('amount'),
+        supabase.from('earnings').select('amount, created_at'),
       ]);
 
       const totalPayouts = payoutsRes.data?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
@@ -50,6 +52,62 @@ export default function Dashboard() {
         totalPayouts,
         totalEarnings,
       });
+
+      // Process weekly earnings data (last 7 days)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const { data: weeklyEarnings } = await supabase
+        .from('earnings')
+        .select('amount, created_at')
+        .gte('created_at', sevenDaysAgo.toISOString());
+
+      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const weeklyMap = new Map<string, number>();
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dayName = daysOfWeek[date.getDay()];
+        weeklyMap.set(dayName, 0);
+      }
+
+      weeklyEarnings?.forEach((earning) => {
+        const date = new Date(earning.created_at);
+        const dayName = daysOfWeek[date.getDay()];
+        weeklyMap.set(dayName, (weeklyMap.get(dayName) || 0) + (earning.amount || 0));
+      });
+
+      const weeklyChartData = Array.from(weeklyMap.entries()).map(([name, earnings]) => ({
+        name,
+        earnings: Math.round(earnings * 100) / 100,
+      }));
+      setWeeklyData(weeklyChartData);
+
+      // Process monthly submissions data (last 4 weeks)
+      const fourWeeksAgo = new Date();
+      fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+      
+      const { data: recentSubmissions } = await supabase
+        .from('submissions')
+        .select('submitted_at')
+        .gte('submitted_at', fourWeeksAgo.toISOString());
+
+      const weeklySubmissions = [0, 0, 0, 0];
+      recentSubmissions?.forEach((sub) => {
+        const daysAgo = Math.floor((Date.now() - new Date(sub.submitted_at).getTime()) / (1000 * 60 * 60 * 24));
+        const weekIndex = Math.floor(daysAgo / 7);
+        if (weekIndex < 4) {
+          weeklySubmissions[3 - weekIndex]++;
+        }
+      });
+
+      const monthlyChartData = weeklySubmissions.map((count, index) => ({
+        name: `Week ${index + 1}`,
+        submissions: count,
+      }));
+      setMonthlyData(monthlyChartData);
+
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {
@@ -57,22 +115,6 @@ export default function Dashboard() {
     }
   };
 
-  const mockWeeklyData = [
-    { name: 'Mon', earnings: 1200 },
-    { name: 'Tue', earnings: 1800 },
-    { name: 'Wed', earnings: 1500 },
-    { name: 'Thu', earnings: 2200 },
-    { name: 'Fri', earnings: 2800 },
-    { name: 'Sat', earnings: 2000 },
-    { name: 'Sun', earnings: 1600 },
-  ];
-
-  const mockMonthlyData = [
-    { name: 'Week 1', submissions: 24 },
-    { name: 'Week 2', submissions: 32 },
-    { name: 'Week 3', submissions: 28 },
-    { name: 'Week 4', submissions: 36 },
-  ];
 
   if (loading) {
     return (
@@ -164,7 +206,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mockWeeklyData}>
+              <LineChart data={weeklyData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="name" className="text-xs" />
                 <YAxis className="text-xs" />
@@ -181,7 +223,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={mockMonthlyData}>
+              <BarChart data={monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="name" className="text-xs" />
                 <YAxis className="text-xs" />

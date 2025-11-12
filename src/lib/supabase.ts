@@ -59,8 +59,8 @@ export type Database = {
       projects: {
         Row: {
           id: string;
-          name: string;
-          url_slug: string;
+          project_name: string;
+          slug: string;
           description?: string;
           price: number;
           commission_rate: number;

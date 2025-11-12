@@ -23,8 +23,8 @@ interface Submission {
   users?: { full_name: string; email: string };
   templates?: { title: string };
   projects?: { 
-    name: string; 
-    url_slug: string;
+    project_name: string; 
+    slug: string;
     description?: string;
     price: number;
     commission_rate: number;
@@ -50,7 +50,7 @@ export default function Submissions() {
           *,
           users:user_id (full_name, email),
           templates:template_id (title),
-          projects:project_id (name, url_slug, description, price, commission_rate)
+          projects:project_id (project_name, slug, description, price, commission_rate)
         `)
         .order('submitted_at', { ascending: false });
 
@@ -258,17 +258,17 @@ export default function Submissions() {
 
               {/* Project Information */}
               <div className="grid gap-4">
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Project Information</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Project Name</p>
-                      <p className="font-medium">{selectedSubmission.projects?.name || selectedSubmission.project_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">URL Slug</p>
-                      <p className="font-medium">{selectedSubmission.projects?.url_slug || 'N/A'}</p>
-                    </div>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Project Information</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Project Name</p>
+                        <p className="font-medium">{selectedSubmission.projects?.project_name || selectedSubmission.project_name}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">URL Slug</p>
+                        <p className="font-medium">{selectedSubmission.projects?.slug || 'N/A'}</p>
+                      </div>
                     <div>
                       <p className="text-muted-foreground">Template</p>
                       <p className="font-medium">{selectedSubmission.templates?.title || 'Unknown'}</p>
