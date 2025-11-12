@@ -47,9 +47,24 @@ export type Database = {
           id: string;
           user_id: string;
           template_id: string;
+          project_id: string;
           project_name: string;
           status: string;
           submitted_at: string;
+          image_url?: string;
+          price?: number;
+          commission_rate?: number;
+        };
+      };
+      projects: {
+        Row: {
+          id: string;
+          name: string;
+          url_slug: string;
+          description?: string;
+          price: number;
+          commission_rate: number;
+          created_at: string;
         };
       };
       earnings: {
@@ -58,6 +73,7 @@ export type Database = {
           user_id: string;
           amount: number;
           status: string;
+          source?: string;
           created_at: string;
         };
       };
