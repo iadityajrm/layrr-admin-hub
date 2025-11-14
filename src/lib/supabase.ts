@@ -64,6 +64,8 @@ export type Database = {
           description?: string;
           price: number;
           commission_rate: number;
+          approval_status: 'pending' | 'under_review' | 'approved' | 'rejected';
+          owner_id?: string;
           created_at: string;
         };
       };

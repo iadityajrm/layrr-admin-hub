@@ -10,6 +10,7 @@ import DashboardLayout from "./pages/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import Submissions from "./pages/Submissions";
 import Templates from "./pages/Templates";
+import Projects from "./pages/Projects";
 import Users from "./pages/Users";
 import Earnings from "./pages/Earnings";
 import NotFound from "./pages/NotFound";
@@ -36,6 +37,7 @@ const App = () => (
             >
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="submissions" element={<Submissions />} />
+              <Route path="projects" element={<Projects />} />
               <Route path="templates" element={<Templates />} />
               <Route path="users" element={<Users />} />
               <Route path="earnings" element={<Earnings />} />

@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Users, DollarSign, Package, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, DollarSign, Package, LogOut, Folder } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 const menuItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Submissions', url: '/submissions', icon: FileText },
+  { title: 'Projects', url: '/projects', icon: Folder },
   { title: 'Templates', url: '/templates', icon: Package },
   { title: 'Users', url: '/users', icon: Users },
   { title: 'Earnings', url: '/earnings', icon: DollarSign },

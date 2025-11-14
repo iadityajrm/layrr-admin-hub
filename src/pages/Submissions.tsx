@@ -28,6 +28,8 @@ interface Submission {
     description?: string;
     price: number;
     commission_rate: number;
+    approval_status?: 'pending' | 'under_review' | 'approved' | 'rejected';
+    owner_id?: string;
   };
 }
 
@@ -50,7 +52,7 @@ export default function Submissions() {
           *,
           users:user_id (full_name, email),
           templates:template_id (title),
-          projects:project_id (project_name, slug, description, price, commission_rate)
+          projects:project_id (project_name, slug, description, price, commission_rate, approval_status, owner_id)
         `)
         .order('submitted_at', { ascending: false });
 
@@ -86,11 +88,20 @@ export default function Submissions() {
 
       if (updateError) throw updateError;
 
+      // Update linked project's approval status to approved
+      if (submission.project_id) {
+        const { error: projectError } = await supabase
+          .from('projects')
+          .update({ approval_status: 'approved' })
+          .eq('id', submission.project_id);
+        if (projectError) throw projectError;
+      }
+
       // Create earnings entry
       const { error: earningsError } = await supabase
         .from('earnings')
         .insert({
-          user_id: submission.user_id,
+          user_id: submission.projects?.owner_id || submission.user_id,
           amount: payoutAmount,
           status: 'pending',
           source: submission.id,
@@ -118,7 +129,7 @@ export default function Submissions() {
     }
   };
 
-  const updateSubmissionStatus = async (id: string, status: 'rejected') => {
+  const updateSubmissionStatus = async (id: string, status: 'rejected', projectId?: string) => {
     try {
       const { error } = await supabase
         .from('submissions')
@@ -126,6 +137,15 @@ export default function Submissions() {
         .eq('id', id);
 
       if (error) throw error;
+
+      // If rejecting, mark project approval as rejected
+      if (status === 'rejected' && projectId) {
+        const { error: projectError } = await supabase
+          .from('projects')
+          .update({ approval_status: 'rejected' })
+          .eq('id', projectId);
+        if (projectError) throw projectError;
+      }
 
       toast({
         title: "Success",
@@ -170,6 +190,9 @@ export default function Submissions() {
                 <TableHead>User</TableHead>
                 <TableHead>Template</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Approval Status</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Commission</TableHead>
                 <TableHead>Submitted</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -197,6 +220,25 @@ export default function Submissions() {
                       {submission.status}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        submission.projects?.approval_status === 'approved'
+                          ? 'default'
+                          : submission.projects?.approval_status === 'rejected'
+                          ? 'destructive'
+                          : 'secondary'
+                      }
+                    >
+                      {submission.projects?.approval_status || 'pending'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    ${(submission.projects?.price ?? submission.price ?? 0).toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    {(submission.projects?.commission_rate ?? submission.commission_rate ?? 0)}%
+                  </TableCell>
                   <TableCell>{new Date(submission.submitted_at).toLocaleDateString()}</TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-2">
@@ -209,6 +251,28 @@ export default function Submissions() {
                       </Button>
                       {submission.status === 'pending' && (
                         <>
+                          {submission.projects?.approval_status === 'pending' && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={async () => {
+                                try {
+                                  const { error } = await supabase
+                                    .from('projects')
+                                    .update({ approval_status: 'under_review' })
+                                    .eq('id', submission.project_id);
+                                  if (error) throw error;
+                                  toast({ title: 'Updated', description: 'Marked as Under Review' });
+                                  fetchSubmissions();
+                                } catch (err) {
+                                  console.error('Error updating approval status:', err);
+                                  toast({ title: 'Error', description: 'Failed to update approval status', variant: 'destructive' });
+                                }
+                              }}
+                            >
+                              Mark Under Review
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             onClick={() => approveAndCreatePayout(submission)}
@@ -220,7 +284,7 @@ export default function Submissions() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => updateSubmissionStatus(submission.id, 'rejected')}
+                            onClick={() => updateSubmissionStatus(submission.id, 'rejected', submission.project_id)}
                           >
                             <XCircle className="h-4 w-4 mr-1" />
                             Reject
@@ -285,6 +349,20 @@ export default function Submissions() {
                         }
                       >
                         {selectedSubmission.status}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Approval Status</p>
+                      <Badge
+                        variant={
+                          selectedSubmission.projects?.approval_status === 'approved'
+                            ? 'default'
+                            : selectedSubmission.projects?.approval_status === 'rejected'
+                            ? 'destructive'
+                            : 'secondary'
+                        }
+                      >
+                        {selectedSubmission.projects?.approval_status || 'pending'}
                       </Badge>
                     </div>
                   </div>
@@ -356,6 +434,28 @@ export default function Submissions() {
                 {/* Actions */}
                 {selectedSubmission.status === 'pending' && (
                   <div className="flex gap-3 pt-4">
+                    {selectedSubmission.projects?.approval_status === 'pending' && (
+                      <Button
+                        variant="secondary"
+                        className="flex-1"
+                        onClick={async () => {
+                          try {
+                            const { error } = await supabase
+                              .from('projects')
+                              .update({ approval_status: 'under_review' })
+                              .eq('id', selectedSubmission.project_id);
+                            if (error) throw error;
+                            toast({ title: 'Updated', description: 'Marked as Under Review' });
+                            fetchSubmissions();
+                          } catch (err) {
+                            console.error('Error updating approval status:', err);
+                            toast({ title: 'Error', description: 'Failed to update approval status', variant: 'destructive' });
+                          }
+                        }}
+                      >
+                        Mark Under Review
+                      </Button>
+                    )}
                     <Button
                       className="flex-1"
                       onClick={() => approveAndCreatePayout(selectedSubmission)}
@@ -368,7 +468,7 @@ export default function Submissions() {
                       variant="destructive"
                       className="flex-1"
                       onClick={() => {
-                        updateSubmissionStatus(selectedSubmission.id, 'rejected');
+                        updateSubmissionStatus(selectedSubmission.id, 'rejected', selectedSubmission.project_id);
                         setSelectedSubmission(null);
                       }}
                     >

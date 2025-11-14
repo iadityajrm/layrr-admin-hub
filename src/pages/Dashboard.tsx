@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Package, FileCheck, DollarSign, Clock, TrendingUp } from 'lucide-react';
+import { Users, Package, FileCheck, DollarSign, Clock, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 interface DashboardStats {
@@ -11,6 +11,10 @@ interface DashboardStats {
   pendingSubmissions: number;
   totalPayouts: number;
   totalEarnings: number;
+  pendingApprovals: number;
+  underReviewApprovals: number;
+  approvedApprovals: number;
+  rejectedApprovals: number;
 }
 
 export default function Dashboard() {
@@ -21,6 +25,10 @@ export default function Dashboard() {
     pendingSubmissions: 0,
     totalPayouts: 0,
     totalEarnings: 0,
+    pendingApprovals: 0,
+    underReviewApprovals: 0,
+    approvedApprovals: 0,
+    rejectedApprovals: 0,
   });
   const [weeklyData, setWeeklyData] = useState<{ name: string; earnings: number }[]>([]);
   const [monthlyData, setMonthlyData] = useState<{ name: string; submissions: number }[]>([]);
@@ -32,12 +40,16 @@ export default function Dashboard() {
 
   const fetchDashboardStats = async () => {
     try {
-      const [usersRes, templatesRes, submissionsRes, pendingRes, earningsRes] = await Promise.all([
+      const [usersRes, templatesRes, submissionsRes, pendingRes, earningsRes, pendingApprovalsRes, underReviewApprovalsRes, approvedApprovalsRes, rejectedApprovalsRes] = await Promise.all([
         supabase.from('users').select('*', { count: 'exact', head: true }),
         supabase.from('templates').select('*', { count: 'exact', head: true }),
         supabase.from('submissions').select('*', { count: 'exact', head: true }),
         supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('earnings').select('amount, status, created_at'),
+        supabase.from('projects').select('*', { count: 'exact', head: true }).eq('approval_status', 'pending'),
+        supabase.from('projects').select('*', { count: 'exact', head: true }).eq('approval_status', 'under_review'),
+        supabase.from('projects').select('*', { count: 'exact', head: true }).eq('approval_status', 'approved'),
+        supabase.from('projects').select('*', { count: 'exact', head: true }).eq('approval_status', 'rejected'),
       ]);
 
       const totalEarnings = earningsRes.data?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
@@ -50,6 +62,10 @@ export default function Dashboard() {
         pendingSubmissions: pendingRes.count || 0,
         totalPayouts,
         totalEarnings,
+        pendingApprovals: pendingApprovalsRes.count || 0,
+        underReviewApprovals: underReviewApprovalsRes.count || 0,
+        approvedApprovals: approvedApprovalsRes.count || 0,
+        rejectedApprovals: rejectedApprovalsRes.count || 0,
       });
 
       // Process weekly earnings data (last 7 days)
@@ -194,6 +210,53 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-2xl font-bold">${stats.totalPayouts.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">Total paid out</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Approval Progress */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.pendingApprovals}</div>
+            <p className="text-xs text-muted-foreground mt-1">Projects awaiting review</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Under Review</CardTitle>
+            <FileCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.underReviewApprovals}</div>
+            <p className="text-xs text-muted-foreground mt-1">Currently being assessed</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.approvedApprovals}</div>
+            <p className="text-xs text-muted-foreground mt-1">Approved projects</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Rejected</CardTitle>
+            <XCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.rejectedApprovals}</div>
+            <p className="text-xs text-muted-foreground mt-1">Declined projects</p>
           </CardContent>
         </Card>
       </div>
