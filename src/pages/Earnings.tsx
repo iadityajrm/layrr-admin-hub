@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { DollarSign, CheckCircle } from 'lucide-react';
+import { DollarSign, CheckCircle, TrendingUp } from 'lucide-react';
 
 interface Earning {
   id: string;
@@ -19,7 +19,7 @@ interface Earning {
 export default function Earnings() {
   const [earnings, setEarnings] = useState<Earning[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ pending: 0, paid: 0 });
+  const [stats, setStats] = useState({ pending: 0, paid: 0, platform: 0 });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -48,8 +48,15 @@ export default function Earnings() {
       const paid = earningsData
         .filter(e => e.status === 'paid')
         .reduce((sum, e) => sum + e.amount, 0);
+      // Compute platform earnings: sum of approved project prices - total paid commissions
+      const { data: approvedProjectsData } = await supabase
+        .from('projects')
+        .select('price')
+        .eq('approval_status', 'approved');
+      const totalApprovedPrice = approvedProjectsData?.reduce((sum, p) => sum + (p.price || 0), 0) || 0;
+      const platform = totalApprovedPrice - paid;
 
-      setStats({ pending, paid });
+      setStats({ pending, paid, platform });
     } catch (error) {
       console.error('Error fetching earnings:', error);
       toast({
@@ -103,7 +110,17 @@ export default function Earnings() {
         <p className="text-muted-foreground mt-2">Manage user earnings and process payouts</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Platform Earnings</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${stats.platform.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Completed order price minus paid commissions</p>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Pending Payouts</CardTitle>

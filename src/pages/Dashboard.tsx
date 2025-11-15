@@ -40,7 +40,7 @@ export default function Dashboard() {
 
   const fetchDashboardStats = async () => {
     try {
-      const [usersRes, templatesRes, submissionsRes, pendingRes, earningsRes, pendingApprovalsRes, underReviewApprovalsRes, approvedApprovalsRes, rejectedApprovalsRes] = await Promise.all([
+      const [usersRes, templatesRes, submissionsRes, pendingRes, earningsRes, pendingApprovalsRes, underReviewApprovalsRes, approvedApprovalsRes, rejectedApprovalsRes, approvedProjectsDataRes] = await Promise.all([
         supabase.from('users').select('*', { count: 'exact', head: true }),
         supabase.from('templates').select('*', { count: 'exact', head: true }),
         supabase.from('submissions').select('*', { count: 'exact', head: true }),
@@ -50,10 +50,12 @@ export default function Dashboard() {
         supabase.from('projects').select('*', { count: 'exact', head: true }).eq('approval_status', 'under_review'),
         supabase.from('projects').select('*', { count: 'exact', head: true }).eq('approval_status', 'approved'),
         supabase.from('projects').select('*', { count: 'exact', head: true }).eq('approval_status', 'rejected'),
+        supabase.from('projects').select('price, created_at').eq('approval_status', 'approved'),
       ]);
 
-      const totalEarnings = earningsRes.data?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+      const totalApprovedPrice = approvedProjectsDataRes.data?.reduce((sum, p) => sum + (p.price || 0), 0) || 0;
       const totalPayouts = earningsRes.data?.filter(e => e.status === 'paid').reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+      const totalEarnings = totalApprovedPrice - totalPayouts;
 
       setStats({
         totalUsers: usersRes.count || 0,
@@ -68,14 +70,9 @@ export default function Dashboard() {
         rejectedApprovals: rejectedApprovalsRes.count || 0,
       });
 
-      // Process weekly earnings data (last 7 days)
+      // Process weekly platform earnings data (last 7 days)
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
-      const { data: weeklyEarnings } = await supabase
-        .from('earnings')
-        .select('amount, created_at')
-        .gte('created_at', sevenDaysAgo.toISOString());
 
       const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const weeklyMap = new Map<string, number>();
@@ -87,11 +84,23 @@ export default function Dashboard() {
         weeklyMap.set(dayName, 0);
       }
 
-      weeklyEarnings?.forEach((earning) => {
-        const date = new Date(earning.created_at);
-        const dayName = daysOfWeek[date.getDay()];
-        weeklyMap.set(dayName, (weeklyMap.get(dayName) || 0) + (earning.amount || 0));
-      });
+      // Add approved project prices per day
+      approvedProjectsDataRes.data
+        ?.filter(p => new Date(p.created_at) >= sevenDaysAgo)
+        .forEach((p) => {
+          const date = new Date(p.created_at);
+          const dayName = daysOfWeek[date.getDay()];
+          weeklyMap.set(dayName, (weeklyMap.get(dayName) || 0) + (p.price || 0));
+        });
+
+      // Subtract paid earnings per day
+      earningsRes.data
+        ?.filter(e => e.status === 'paid' && new Date(e.created_at) >= sevenDaysAgo)
+        .forEach((e) => {
+          const date = new Date(e.created_at);
+          const dayName = daysOfWeek[date.getDay()];
+          weeklyMap.set(dayName, (weeklyMap.get(dayName) || 0) - (e.amount || 0));
+        });
 
       const weeklyChartData = Array.from(weeklyMap.entries()).map(([name, earnings]) => ({
         name,

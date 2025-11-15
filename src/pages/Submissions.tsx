@@ -29,7 +29,7 @@ interface Submission {
     price: number;
     commission_rate: number;
     approval_status?: 'pending' | 'under_review' | 'approved' | 'rejected';
-    owner_id?: string;
+    user_id?: string;
   };
 }
 
@@ -52,7 +52,7 @@ export default function Submissions() {
           *,
           users:user_id (full_name, email),
           templates:template_id (title),
-          projects:project_id (project_name, slug, description, price, commission_rate, approval_status, owner_id)
+          projects:project_id (project_name, slug, description, price, commission_rate, approval_status, user_id)
         `)
         .order('submitted_at', { ascending: false });
 
@@ -101,7 +101,7 @@ export default function Submissions() {
       const { error: earningsError } = await supabase
         .from('earnings')
         .insert({
-          user_id: submission.projects?.owner_id || submission.user_id,
+          user_id: submission.projects?.user_id || submission.user_id,
           amount: payoutAmount,
           status: 'pending',
           source: submission.id,
@@ -109,6 +109,30 @@ export default function Submissions() {
         });
 
       if (earningsError) throw earningsError;
+
+      // Immediately add payout amount to user's earnings_total
+      try {
+        const targetUserId = submission.projects?.user_id || submission.user_id;
+        const { data: userData, error: userFetchError } = await supabase
+          .from('users')
+          .select('earnings_total')
+          .eq('id', targetUserId)
+          .single();
+
+        if (userFetchError) throw userFetchError;
+
+        const currentTotal = userData?.earnings_total || 0;
+        const newTotal = currentTotal + payoutAmount;
+
+        const { error: userUpdateError } = await supabase
+          .from('users')
+          .update({ earnings_total: newTotal })
+          .eq('id', targetUserId);
+
+        if (userUpdateError) throw userUpdateError;
+      } catch (userUpdateIssue) {
+        console.warn('Warning: could not update user earnings_total immediately:', userUpdateIssue);
+      }
 
       toast({
         title: "Success",
